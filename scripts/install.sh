@@ -56,5 +56,7 @@ install -m 644 etc/elevate-pam/services/*.toml "$ETCDIR/services/"
 install -m 644 etc/elevate-pam/services/*.toml "$LIBDIR/elevate-pam/services/"
 install -m 644 include/security/*.h "$INCLUDEDIR/security/" 2>/dev/null || true
 [[ -f target/release/elevate-pam ]] && install -m 755 target/release/elevate-pam "$BINDIR/elevate-pam"
+# setuid root: pam_unix asks it to check passwords when the caller cannot read shadow
+[[ -f target/release/unix_chkpwd ]] && install -m 4755 target/release/unix_chkpwd "$MODDIR/unix_chkpwd"
 
 echo "Done."

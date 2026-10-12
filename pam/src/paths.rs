@@ -97,13 +97,25 @@ impl Default for PathsConfig {
 impl PathsConfig {
     fn candidates() -> Vec<std::path::PathBuf> {
         let mut out = Vec::new();
-        if let Ok(explicit) = std::env::var("ELEVATE_PAM_CONFIG") {
-            out.push(explicit.into());
+        // setuid programs (unix_chkpwd) must not take their config from the caller's environment
+        if !Self::untrusted_env() {
+            if let Ok(explicit) = std::env::var("ELEVATE_PAM_CONFIG") {
+                out.push(explicit.into());
+            }
+        }
+        // set at build time by distributions without a plain /etc (Zainium: /overlayer/syshub/etc)
+        if let Some(built_in) = option_env!("ELEVATE_PAM_CONFIG_PATH") {
+            out.push(built_in.into());
         }
         out.push("/etc/elevate-pam/elevate-pam.toml".into());
         out.push("/etc/elevate-pam.toml".into());
         out.push("elevate-pam.toml".into());
         out
+    }
+
+    /// True when running setuid/setgid: the environment belongs to the unprivileged caller.
+    fn untrusted_env() -> bool {
+        unsafe { libc::getuid() != libc::geteuid() || libc::getgid() != libc::getegid() }
     }
 
     fn from_toml(text: &str) -> Option<Self> {
@@ -140,6 +152,10 @@ impl PathsConfig {
     /// `shadow(5)`.
     pub fn shadow_file(&self) -> String {
         format!("{}/shadow", self.etc_dir)
+    }
+    /// Setuid helper that checks a password against shadow for unprivileged callers.
+    pub fn chkpwd_helper(&self) -> String {
+        format!("{}/unix_chkpwd", self.module_dir)
     }
     /// `shells(5)`.
     pub fn shells_file(&self) -> String {
