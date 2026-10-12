@@ -488,7 +488,11 @@ pub fn check_local_password(user: &str, plain: &str, nullok: bool) -> i32 {
         return PAM_AUTH_ERR;
     }
     if hash.is_empty() {
-        return if nullok && plain.is_empty() { PAM_SUCCESS } else { PAM_AUTH_ERR };
+        return if nullok && plain.is_empty() {
+            PAM_SUCCESS
+        } else {
+            PAM_AUTH_ERR
+        };
     }
     match verify_password(plain, &hash) {
         Ok(true) => PAM_SUCCESS,
@@ -542,20 +546,13 @@ fn read_shadow_hash(user: &str) -> Result<Option<String>, ()> {
 }
 
 fn read_passwd_hash(user: &str) -> Result<Option<String>, ()> {
-    let c_user = CString::new(user).map_err(|_| ())?;
-    unsafe {
-        let pw = libc::getpwnam(c_user.as_ptr());
-        if pw.is_null() {
-            return parse_colon_file(&crate::paths::get().passwd_file(), user, 1);
-        }
-        let hash = CStr::from_ptr((*pw).pw_passwd)
-            .to_string_lossy()
-            .into_owned();
-        if hash == "x" || hash == "*" {
-            return parse_colon_file(&crate::paths::get().shadow_file(), user, 1);
-        }
-        Ok(Some(hash))
+    let Some(pw) = crate::modutil::passwd_by_name(user) else {
+        return parse_colon_file(&crate::paths::get().passwd_file(), user, 1);
+    };
+    if pw.passwd == "x" || pw.passwd == "*" {
+        return parse_colon_file(&crate::paths::get().shadow_file(), user, 1);
     }
+    Ok(Some(pw.passwd))
 }
 
 fn parse_colon_file(path: &str, user: &str, field: usize) -> Result<Option<String>, ()> {
@@ -629,10 +626,7 @@ fn account_status(user: &str) -> AccountStatus {
 }
 
 fn user_exists_passwd(user: &str) -> bool {
-    let Ok(c) = CString::new(user) else {
-        return false;
-    };
-    unsafe { !libc::getpwnam(c.as_ptr()).is_null() }
+    crate::modutil::passwd_by_name(user).is_some()
 }
 
 fn now_days_since_epoch() -> i64 {

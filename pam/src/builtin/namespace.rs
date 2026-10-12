@@ -147,18 +147,7 @@ fn polyinstantiate(polydir: &str, instance_prefix: &str, uid: u32) -> Result<(),
 }
 
 fn lookup_uid(user: &str) -> Option<u32> {
-    let c_user = CString::new(user).ok()?;
-    // SAFETY: c_user is a valid NUL-terminated string for this call; the
-    // returned pointer is only read (uid field copied out) before any
-    // other libc call in this function.
-    unsafe {
-        let pw = libc::getpwnam(c_user.as_ptr());
-        if pw.is_null() {
-            None
-        } else {
-            Some((*pw).pw_uid)
-        }
-    }
+    crate::modutil::passwd_by_name(user).map(|pw| pw.uid)
 }
 
 fn chown(path: &std::path::Path, uid: u32) -> Result<(), String> {

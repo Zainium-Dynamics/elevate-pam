@@ -103,15 +103,7 @@ fn load_pam_env_conf(pamh: &mut PamHandle, path: &str) -> Result<(), ()> {
 }
 
 fn home_dir(user: &str) -> Option<String> {
-    use std::ffi::{CStr, CString};
-    let c = CString::new(user).ok()?;
-    unsafe {
-        let pw = libc::getpwnam(c.as_ptr());
-        if pw.is_null() {
-            return None;
-        }
-        Some(CStr::from_ptr((*pw).pw_dir).to_string_lossy().into_owned())
-    }
+    crate::modutil::passwd_by_name(user).map(|pw| pw.dir)
 }
 
 #[allow(dead_code)]

@@ -122,21 +122,34 @@ fn leak_cstring(s: &str) -> *mut c_char {
     CString::new(s).unwrap_or_default().into_raw()
 }
 
-struct PwEntry {
-    name: String,
-    passwd: String,
-    uid: u32,
-    gid: u32,
-    gecos: String,
-    dir: String,
-    shell: String,
+/// A passwd line.
+pub struct PwEntry {
+    /// Login name.
+    pub name: String,
+    /// Password field (`x` when the hash is in shadow).
+    pub passwd: String,
+    /// User id.
+    pub uid: u32,
+    /// Primary group id.
+    pub gid: u32,
+    /// Comment / full name.
+    pub gecos: String,
+    /// Home directory.
+    pub dir: String,
+    /// Login shell.
+    pub shell: String,
 }
 
-struct GrEntry {
-    name: String,
-    passwd: String,
-    gid: u32,
-    members: Vec<String>,
+/// A group line.
+pub struct GrEntry {
+    /// Group name.
+    pub name: String,
+    /// Group password field.
+    pub passwd: String,
+    /// Group id.
+    pub gid: u32,
+    /// Supplementary members.
+    pub members: Vec<String>,
 }
 
 struct SpEntry {
@@ -208,6 +221,26 @@ fn find_group(pred: impl Fn(&GrEntry) -> bool) -> Option<GrEntry> {
         }
     }
     None
+}
+
+/// passwd entry for `name` from the configured passwd file. Builtin modules use this
+/// instead of getpwnam(): a statically linked caller's musl only reads /etc/passwd.
+pub fn passwd_by_name(name: &str) -> Option<PwEntry> {
+    find_passwd(|e| e.name == name)
+}
+
+/// group entry for `name` from the configured group file.
+pub fn group_by_name(name: &str) -> Option<GrEntry> {
+    find_group(|e| e.name == name)
+}
+
+/// Whether `user` has `group` as primary group or is listed in it; `None` if the user is unknown.
+pub fn user_in_group(user: &str, group: &str) -> Option<bool> {
+    let pw = passwd_by_name(user)?;
+    Some(
+        group_by_name(group)
+            .is_some_and(|gr| gr.gid == pw.gid || gr.members.iter().any(|m| m == user)),
+    )
 }
 
 fn find_shadow(pred: impl Fn(&SpEntry) -> bool) -> Option<SpEntry> {

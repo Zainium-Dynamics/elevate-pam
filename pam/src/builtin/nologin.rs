@@ -51,14 +51,7 @@ fn is_root_user(user: &str) -> bool {
     if user == "root" {
         return true;
     }
-    use std::ffi::CString;
-    let Ok(c) = CString::new(user) else {
-        return false;
-    };
-    unsafe {
-        let pw = libc::getpwnam(c.as_ptr());
-        !pw.is_null() && (*pw).pw_uid == 0
-    }
+    crate::modutil::passwd_by_name(user).is_some_and(|pw| pw.uid == 0)
 }
 
 #[allow(dead_code)]

@@ -21,23 +21,18 @@ fn eval_condition(pamh: &mut PamHandle, _flags: i32, args: &[String]) -> PamStat
     let op = &args[1];
     let expected = &args[2];
 
-    let c_user = std::ffi::CString::new(username.clone()).unwrap_or_default();
-    let pwd = unsafe { libc::getpwnam(c_user.as_ptr()) };
+    let pw = crate::modutil::passwd_by_name(&username);
 
     let field_val = match field.as_str() {
         "user" => username.clone(),
-        "uid" => {
-            if pwd.is_null() {
-                return PamStatus::new(PAM_AUTH_ERR);
-            }
-            unsafe { (*pwd).pw_uid.to_string() }
-        }
-        "gid" => {
-            if pwd.is_null() {
-                return PamStatus::new(PAM_AUTH_ERR);
-            }
-            unsafe { (*pwd).pw_gid.to_string() }
-        }
+        "uid" => match &pw {
+            Some(pw) => pw.uid.to_string(),
+            None => return PamStatus::new(PAM_AUTH_ERR),
+        },
+        "gid" => match &pw {
+            Some(pw) => pw.gid.to_string(),
+            None => return PamStatus::new(PAM_AUTH_ERR),
+        },
         _ => return PamStatus::new(PAM_SUCCESS),
     };
 

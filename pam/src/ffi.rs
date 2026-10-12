@@ -312,7 +312,9 @@ pub unsafe extern "C" fn pam_strerror(_pamh: *mut PamHandleT, errnum: c_int) -> 
     static C_MESSAGES: std::sync::OnceLock<Vec<std::ffi::CString>> = std::sync::OnceLock::new();
     let table = C_MESSAGES.get_or_init(|| {
         (0..crate::constants::PAM_RETURN_VALUES as i32 + 1)
-            .map(|n| std::ffi::CString::new(crate::constants::pam_strerror_static(n)).unwrap_or_default())
+            .map(|n| {
+                std::ffi::CString::new(crate::constants::pam_strerror_static(n)).unwrap_or_default()
+            })
             .collect()
     });
     let i = if errnum >= 0 && (errnum as usize) < table.len() - 1 {

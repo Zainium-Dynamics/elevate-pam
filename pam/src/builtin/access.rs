@@ -12,7 +12,6 @@
 //! scope already accepted in `pam-limits`'s `@group` handling.
 
 use alloc::string::String;
-use std::ffi::CStr;
 use std::fs;
 
 use crate::constants::{PAM_PERM_DENIED, PAM_SUCCESS};
@@ -142,38 +141,7 @@ fn match_one_origin(item: &str, origin: &str) -> bool {
 }
 
 fn is_group_member(user: &str, group: &str) -> bool {
-    let (Ok(c_user), Ok(c_group)) = (std::ffi::CString::new(user), std::ffi::CString::new(group))
-    else {
-        return false;
-    };
-    // SAFETY: c_user/c_group are valid NUL-terminated strings for the
-    // duration of these libc calls; the returned pointers are only read
-    // (via CStr, never retained) before the next libc call in this scope.
-    unsafe {
-        let pw = libc::getpwnam(c_user.as_ptr());
-        if pw.is_null() {
-            return false;
-        }
-        let primary_gid = (*pw).pw_gid;
-
-        let gr = libc::getgrnam(c_group.as_ptr());
-        if gr.is_null() {
-            return false;
-        }
-        if (*gr).gr_gid == primary_gid {
-            return true;
-        }
-        let mut mem = (*gr).gr_mem;
-        if !mem.is_null() {
-            while !(*mem).is_null() {
-                if CStr::from_ptr(*mem).to_string_lossy() == user {
-                    return true;
-                }
-                mem = mem.add(1);
-            }
-        }
-        false
-    }
+    crate::modutil::user_in_group(user, group).unwrap_or(false)
 }
 
 #[cfg(test)]

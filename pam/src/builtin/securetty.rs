@@ -45,14 +45,7 @@ fn check(pamh: &mut PamHandle, _flags: i32, args: &[String]) -> PamStatus {
 }
 
 fn is_uid0(user: &str) -> bool {
-    use std::ffi::CString;
-    let Ok(c) = CString::new(user) else {
-        return false;
-    };
-    unsafe {
-        let pw = libc::getpwnam(c.as_ptr());
-        !pw.is_null() && (*pw).pw_uid == 0
-    }
+    crate::modutil::passwd_by_name(user).is_some_and(|pw| pw.uid == 0)
 }
 
 fn tty_is_secure(tty: &str, file: &str) -> bool {

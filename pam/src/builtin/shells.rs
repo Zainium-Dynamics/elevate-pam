@@ -17,20 +17,10 @@ fn check_shell(pamh: &mut PamHandle, _flags: i32, _args: &[String]) -> PamStatus
     };
 
     // Find user's shell from passwd
-    let c_user = match std::ffi::CString::new(username) {
-        Ok(c) => c,
-        Err(_) => return PamStatus::new(PAM_AUTH_ERR),
+    let Some(pw) = crate::modutil::passwd_by_name(&username) else {
+        return PamStatus::new(PAM_AUTH_ERR);
     };
-    let pwd = unsafe { libc::getpwnam(c_user.as_ptr()) };
-    if pwd.is_null() {
-        return PamStatus::new(PAM_AUTH_ERR);
-    }
-
-    let shell_ptr = unsafe { (*pwd).pw_shell };
-    if shell_ptr.is_null() {
-        return PamStatus::new(PAM_AUTH_ERR);
-    }
-    let user_shell = unsafe { std::ffi::CStr::from_ptr(shell_ptr) }.to_string_lossy();
+    let user_shell = pw.shell;
 
     // Check the configured shells file
     if let Ok(file) = File::open(crate::paths::get().shells_file()) {

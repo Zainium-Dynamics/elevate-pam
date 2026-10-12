@@ -13,17 +13,11 @@ fn check_usertype(pamh: &mut PamHandle, _flags: i32, args: &[String]) -> PamStat
         None => return PamStatus::new(PAM_AUTH_ERR),
     };
 
-    let c_user = match std::ffi::CString::new(username) {
-        Ok(c) => c,
-        Err(_) => return PamStatus::new(PAM_AUTH_ERR),
+    let Some(pw) = crate::modutil::passwd_by_name(&username) else {
+        return PamStatus::new(PAM_AUTH_ERR);
     };
 
-    let pwd = unsafe { libc::getpwnam(c_user.as_ptr()) };
-    if pwd.is_null() {
-        return PamStatus::new(PAM_AUTH_ERR);
-    }
-
-    let uid = unsafe { (*pwd).pw_uid };
+    let uid = pw.uid;
     let is_sys = uid < 1000;
 
     let target_type = args.first().map(|s| s.as_str()).unwrap_or("regular");

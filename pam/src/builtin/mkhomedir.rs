@@ -2,7 +2,6 @@
 //! open, if it doesn't already exist. See `pam_mkhomedir(8)`.
 
 use alloc::string::String;
-use std::ffi::CStr;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -31,19 +30,11 @@ struct Passwd {
 }
 
 fn lookup_passwd(user: &str) -> Option<Passwd> {
-    let c_user = std::ffi::CString::new(user).ok()?;
-    unsafe {
-        let pw = libc::getpwnam(c_user.as_ptr());
-        if pw.is_null() {
-            return None;
-        }
-        let dir = CStr::from_ptr((*pw).pw_dir).to_string_lossy().into_owned();
-        Some(Passwd {
-            dir,
-            uid: (*pw).pw_uid,
-            gid: (*pw).pw_gid,
-        })
-    }
+    crate::modutil::passwd_by_name(user).map(|pw| Passwd {
+        dir: pw.dir,
+        uid: pw.uid,
+        gid: pw.gid,
+    })
 }
 
 fn create_home(pamh: &mut PamHandle, _flags: i32, args: &[String]) -> PamStatus {

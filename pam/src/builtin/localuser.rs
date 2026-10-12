@@ -13,13 +13,7 @@ fn check_local(pamh: &mut PamHandle, _flags: i32, _args: &[String]) -> PamStatus
         None => return PamStatus::new(PAM_USER_UNKNOWN),
     };
 
-    let c_user = match std::ffi::CString::new(username) {
-        Ok(c) => c,
-        Err(_) => return PamStatus::new(PAM_USER_UNKNOWN),
-    };
-
-    let pwd = unsafe { libc::getpwnam(c_user.as_ptr()) };
-    if !pwd.is_null() {
+    if crate::modutil::passwd_by_name(&username).is_some() {
         PamStatus::new(PAM_SUCCESS)
     } else {
         PamStatus::new(PAM_USER_UNKNOWN)

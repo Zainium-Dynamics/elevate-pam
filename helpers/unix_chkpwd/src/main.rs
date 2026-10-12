@@ -43,7 +43,9 @@ fn main() -> ExitCode {
 
     // only pam_unix feeds this helper, through a pipe
     if std::io::stdin().is_terminal() || args.len() != 2 {
-        log(&format!("inappropriate use of Unix helper binary [UID={ruid}]"));
+        log(&format!(
+            "inappropriate use of Unix helper binary [UID={ruid}]"
+        ));
         eprintln!("This binary is not designed for running in this way");
         std::thread::sleep(Duration::from_secs(10));
         return exit(PAM_SYSTEM_ERR);
@@ -64,7 +66,11 @@ fn main() -> ExitCode {
     };
 
     let mut buf = Vec::new();
-    if std::io::stdin().take(MAX_PASSWORD).read_to_end(&mut buf).is_err() {
+    if std::io::stdin()
+        .take(MAX_PASSWORD)
+        .read_to_end(&mut buf)
+        .is_err()
+    {
         return exit(PAM_SYSTEM_ERR);
     }
     while matches!(buf.last(), Some(b'\n' | b'\r' | b'\0')) {
@@ -85,5 +91,9 @@ fn main() -> ExitCode {
     }
     // the helper can be run directly, so it slows guessing itself
     std::thread::sleep(Duration::from_secs(1));
-    exit(if rc == PAM_USER_UNKNOWN { PAM_AUTHINFO_UNAVAIL } else { PAM_AUTH_ERR })
+    exit(if rc == PAM_USER_UNKNOWN {
+        PAM_AUTHINFO_UNAVAIL
+    } else {
+        PAM_AUTH_ERR
+    })
 }
