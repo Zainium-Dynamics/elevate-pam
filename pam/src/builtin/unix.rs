@@ -41,26 +41,30 @@ fn authenticate(pamh: &mut PamHandle, flags: i32, args: &[String]) -> PamStatus 
     }
 
     let hash = match password_hash(&user) {
-        Ok(Some(h)) => h,
+        Ok(Some(h)) => Some(h),
         Ok(None) => return PamStatus::new(PAM_USER_UNKNOWN),
+        // shadow is root-only: an unprivileged caller (a screen locker) asks the setuid helper
+        Err(_) if unsafe { libc::geteuid() } != 0 => None,
         Err(_) => return PamStatus::new(PAM_AUTHINFO_UNAVAIL),
     };
 
-    // Locked account: hash starts with ! or *
-    if hash.starts_with('!') || hash.starts_with('*') {
-        return PamStatus::new(PAM_AUTH_ERR);
-    }
-
-    // Empty password
-    if hash.is_empty() {
-        if flags & PAM_DISALLOW_NULL_AUTHTOK != 0 {
+    if let Some(hash) = &hash {
+        // Locked account: hash starts with ! or *
+        if hash.starts_with('!') || hash.starts_with('*') {
             return PamStatus::new(PAM_AUTH_ERR);
         }
-        // nullok
-        if arg_has(args, "nullok") || arg_has(args, "nullok_secure") {
-            return PamStatus::new(PAM_SUCCESS);
+
+        // Empty password
+        if hash.is_empty() {
+            if flags & PAM_DISALLOW_NULL_AUTHTOK != 0 {
+                return PamStatus::new(PAM_AUTH_ERR);
+            }
+            // nullok
+            if arg_has(args, "nullok") || arg_has(args, "nullok_secure") {
+                return PamStatus::new(PAM_SUCCESS);
+            }
+            return PamStatus::new(PAM_AUTH_ERR);
         }
-        return PamStatus::new(PAM_AUTH_ERR);
     }
 
     // use_first_pass: only ever use an already-set AUTHTOK item (from an
@@ -89,7 +93,14 @@ fn authenticate(pamh: &mut PamHandle, flags: i32, args: &[String]) -> PamStatus 
         return PamStatus::new(PAM_AUTH_ERR);
     }
 
-    let result = verify_password(&tok, &hash);
+    let result = match &hash {
+        Some(hash) => verify_password(&tok, hash),
+        None => {
+            let nullok = flags & PAM_DISALLOW_NULL_AUTHTOK == 0
+                && (arg_has(args, "nullok") || arg_has(args, "nullok_secure"));
+            helper_verify(&user, &tok, nullok)
+        }
+    };
     if arg_has(args, "debug") {
         crate::log::debug(pamh, &format!("unix: authenticate('{user}') -> {result:?}"));
     }
@@ -109,12 +120,24 @@ fn acct_mgmt(pamh: &mut PamHandle, _flags: i32, _args: &[String]) -> PamStatus {
         Ok(u) => u,
         Err(e) => return e.to_status(),
     };
-    match account_status(&user) {
-        AccountStatus::Ok => PamStatus::new(PAM_SUCCESS),
-        AccountStatus::Expired => PamStatus::new(PAM_ACCT_EXPIRED),
-        AccountStatus::NewAuthTok => PamStatus::new(PAM_NEW_AUTHTOK_REQD),
-        AccountStatus::Unknown => PamStatus::new(PAM_USER_UNKNOWN),
-        AccountStatus::Error => PamStatus::new(PAM_AUTHINFO_UNAVAIL),
+    // shadow is root-only: an unprivileged caller gets the expiry check from the helper
+    let shadow_readable = fs::File::open(crate::paths::get().shadow_file()).is_ok();
+    if !shadow_readable && unsafe { libc::geteuid() } != 0 {
+        if let Ok(code) = helper_run(&user, "chkexpiry", None) {
+            return PamStatus::new(code);
+        }
+    }
+    PamStatus::new(account_status_code(&user))
+}
+
+/// PAM code for `user`'s account state (expiry and password aging) from shadow.
+pub fn account_status_code(user: &str) -> i32 {
+    match account_status(user) {
+        AccountStatus::Ok => PAM_SUCCESS,
+        AccountStatus::Expired => PAM_ACCT_EXPIRED,
+        AccountStatus::NewAuthTok => PAM_NEW_AUTHTOK_REQD,
+        AccountStatus::Unknown => PAM_USER_UNKNOWN,
+        AccountStatus::Error => PAM_AUTHINFO_UNAVAIL,
     }
 }
 
@@ -451,6 +474,58 @@ enum AccountStatus {
     Unknown,
     #[allow(dead_code)]
     Error,
+}
+
+/// Checks `plain` against `user`'s local hash and returns a PAM code; the `unix_chkpwd`
+/// helper runs this as root on behalf of unprivileged callers.
+pub fn check_local_password(user: &str, plain: &str, nullok: bool) -> i32 {
+    let hash = match password_hash(user) {
+        Ok(Some(h)) => h,
+        Ok(None) => return PAM_USER_UNKNOWN,
+        Err(_) => return PAM_AUTHINFO_UNAVAIL,
+    };
+    if hash.starts_with('!') || hash.starts_with('*') {
+        return PAM_AUTH_ERR;
+    }
+    if hash.is_empty() {
+        return if nullok && plain.is_empty() { PAM_SUCCESS } else { PAM_AUTH_ERR };
+    }
+    match verify_password(plain, &hash) {
+        Ok(true) => PAM_SUCCESS,
+        Ok(false) => PAM_AUTH_ERR,
+        Err(_) => PAM_AUTHINFO_UNAVAIL,
+    }
+}
+
+/// Runs the setuid `unix_chkpwd` helper (`<user> nullok|nonull|chkexpiry`, password on stdin)
+/// and returns its PAM code.
+fn helper_run(user: &str, option: &str, password: Option<&str>) -> Result<i32, ()> {
+    use std::process::{Command, Stdio};
+
+    let mut child = Command::new(crate::paths::get().chkpwd_helper())
+        .arg(user)
+        .arg(option)
+        .env_clear()
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| ())?;
+    if let Some(mut stdin) = child.stdin.take() {
+        if let Some(pw) = password {
+            // a failed write shows up as a failed check
+            let _ = stdin.write_all(pw.as_bytes());
+        }
+    }
+    child.wait().map_err(|_| ())?.code().ok_or(())
+}
+
+fn helper_verify(user: &str, plain: &str, nullok: bool) -> Result<bool, ()> {
+    match helper_run(user, if nullok { "nullok" } else { "nonull" }, Some(plain))? {
+        PAM_SUCCESS => Ok(true),
+        PAM_AUTH_ERR => Ok(false),
+        _ => Err(()),
+    }
 }
 
 fn password_hash(user: &str) -> Result<Option<String>, ()> {

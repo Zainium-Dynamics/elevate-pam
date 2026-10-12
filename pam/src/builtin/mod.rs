@@ -31,6 +31,9 @@ mod wheel;
 
 use crate::module::{global, ModuleHooks, ModuleId};
 
+/// Local (shadow/passwd) checks for the `unix_chkpwd` helper.
+pub use unix::{account_status_code, check_local_password};
+
 /// Register all builtin modules into the process registry.
 pub fn register_all() {
     register_one(permit::hooks());
