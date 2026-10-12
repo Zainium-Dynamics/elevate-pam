@@ -308,8 +308,19 @@ pub unsafe extern "C" fn pam_get_item(
 /// pointer safety requirements beyond that.
 #[no_mangle]
 pub unsafe extern "C" fn pam_strerror(_pamh: *mut PamHandleT, errnum: c_int) -> *const c_char {
-    let s = crate::constants::pam_strerror_static(errnum);
-    s.as_ptr() as *const c_char
+    // C callers read up to a NUL; the message table holds plain Rust strings, so keep C copies
+    static C_MESSAGES: std::sync::OnceLock<Vec<std::ffi::CString>> = std::sync::OnceLock::new();
+    let table = C_MESSAGES.get_or_init(|| {
+        (0..crate::constants::PAM_RETURN_VALUES as i32 + 1)
+            .map(|n| std::ffi::CString::new(crate::constants::pam_strerror_static(n)).unwrap_or_default())
+            .collect()
+    });
+    let i = if errnum >= 0 && (errnum as usize) < table.len() - 1 {
+        errnum as usize
+    } else {
+        table.len() - 1 // "Unknown PAM error"
+    };
+    table[i].as_ptr()
 }
 
 /// `pam_putenv`.
