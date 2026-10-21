@@ -141,7 +141,7 @@ pub fn dispatch(pamh: &mut PamHandle, flags: i32, kind: StackKind) -> PamResult<
                             }
                             ControlFlow::Die => {
                                 cache.push(code);
-                                maybe_fail_delay(pamh, status);
+                                maybe_fail_delay(pamh, kind, status);
                                 return Ok(PamStatus::new(status));
                             }
                         }
@@ -195,7 +195,7 @@ pub fn dispatch(pamh: &mut PamHandle, flags: i32, kind: StackKind) -> PamResult<
                 if kind == StackKind::Auth {
                     pamh.cached_auth_retvals = cache;
                 }
-                maybe_fail_delay(pamh, status);
+                maybe_fail_delay(pamh, kind, status);
                 return Ok(PamStatus::new(status));
             }
         }
@@ -218,7 +218,7 @@ pub fn dispatch(pamh: &mut PamHandle, flags: i32, kind: StackKind) -> PamResult<
         Impression::Undef => PAM_PERM_DENIED,
     };
 
-    maybe_fail_delay(pamh, final_status);
+    maybe_fail_delay(pamh, kind, final_status);
     Ok(PamStatus::new(final_status))
 }
 
@@ -351,8 +351,10 @@ fn apply_action(
     }
 }
 
-fn maybe_fail_delay(pamh: &mut PamHandle, status: i32) {
-    if status == PAM_SUCCESS {
+/// Like Linux-PAM, only a failed authentication waits: a session or credential
+/// stack that fails (a logout) must not hold up its caller.
+fn maybe_fail_delay(pamh: &mut PamHandle, kind: StackKind, status: i32) {
+    if status == PAM_SUCCESS || kind != StackKind::Auth {
         pamh.fail_delay_usec = 0;
         return;
     }

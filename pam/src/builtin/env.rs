@@ -17,9 +17,14 @@ pub fn hooks() -> ModuleHooks {
         setcred: Some(set_env),
         acct_mgmt: None,
         open_session: Some(set_env),
-        close_session: None,
+        close_session: Some(close_session),
         chauthtok: None,
     }
+}
+
+/// Nothing to undo, as in Linux-PAM's pam_env.
+fn close_session(_pamh: &mut PamHandle, _flags: i32, _args: &[String]) -> PamStatus {
+    PamStatus::new(PAM_SUCCESS)
 }
 
 fn set_env(pamh: &mut PamHandle, _flags: i32, args: &[String]) -> PamStatus {
