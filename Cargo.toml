@@ -5,10 +5,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "pam",
-    "libpam-abi",
-    "libpam-misc",
-    "elevate-pam-cli",
+    "crates/pam",
+    "crates/libpam-abi",
+    "crates/libpam-misc",
+    "crates/elevate-pam-cli",
     "modules/pam-unix",
     "modules/pam-env",
     "modules/pam-limits",
@@ -40,10 +40,10 @@ members = [
     "helpers/unix_chkpwd",
 ]
 default-members = [
-    "pam",
-    "libpam-abi",
-    "libpam-misc",
-    "elevate-pam-cli",
+    "crates/pam",
+    "crates/libpam-abi",
+    "crates/libpam-misc",
+    "crates/elevate-pam-cli",
 ]
 
 [workspace.package]
@@ -58,7 +58,7 @@ categories = ["authentication", "os::linux-apis"]
 keywords = ["pam", "authentication", "linux", "security"]
 
 [workspace.dependencies]
-elevate-pam = { path = "pam", version = "1.0.1" }
+elevate-pam = { path = "crates/pam", version = "1.0.1" }
 libc = "0.2"
 
 [profile.release]

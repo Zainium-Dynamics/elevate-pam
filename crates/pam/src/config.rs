@@ -725,7 +725,7 @@ mod tests {
 
     #[test]
     fn shipped_config_parses() {
-        GlobalConfig::parse(include_str!("../../etc/elevate-pam/elevate-pam.toml"))
+        GlobalConfig::parse(include_str!("../../../etc/elevate-pam/elevate-pam.toml"))
             .expect("etc/elevate-pam/elevate-pam.toml must parse");
     }
 

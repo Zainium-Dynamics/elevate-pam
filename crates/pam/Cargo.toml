@@ -1,4 +1,5 @@
 [package]
+autoexamples = false
 name = "elevate-pam"
 version = "1.0.1"
 edition = "2021"
@@ -8,7 +9,7 @@ repository = "https://github.com/Zainium-Dynamics/elevate-privilege"
 homepage = "https://zainiumdynamics.tech"
 authors = ["alizain <alizain@zainiumdynamics.tech>"]
 description = "elevate-pam — authentication library for elevate/elev/viselev (MIT OR Apache-2.0)"
-readme = "../README.md"
+readme = "../../README.md"
 categories = ["authentication", "os::linux-apis"]
 keywords = ["pam", "authentication", "linux", "security"]
 
@@ -65,4 +66,4 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [[example]]
 name = "pam-client"
-path = "../examples/pam-client.rs"
+path = "examples/pam-client.rs"
