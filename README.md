@@ -17,14 +17,15 @@ careful with password-change stacks.
 ## What's here
 
 ```
-pam/              the engine, built as libelevate_pam (rlib, cdylib, staticlib)
-libpam-abi/       libpam.so.0-compatible shim
-libpam-misc/      pam_misc helpers
-elevate-pam-cli/  small CLI
-modules/          one crate per PAM module (pam-unix, pam-env, ...)
-helpers/          unix_chkpwd
-etc/              example config and service stacks
-include/security/ C headers
+crates/pam/              the engine, built as libelevate_pam
+crates/libpam-abi/       libpam.so.0-compatible shim
+crates/libpam-misc/      pam_misc helpers
+crates/elevate-pam-cli/  small CLI
+modules/                 loadable pam_*.so modules (unix, env, limits, ...)
+helpers/                 unix_chkpwd
+etc/                     example config and service stacks
+include/security/        C headers
+scripts/                 build and install
 ```
 
 Builtin modules (compiled into the library): `access`, `debug`, `deny`, `echo`,
