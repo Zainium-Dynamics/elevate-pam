@@ -12,6 +12,7 @@ nothing here depends on it.
 
 Status: works for the stacks we use it for, but it's young. `chauthtok` in the
 builtin `pam_unix` is not finished (it returns `PAM_AUTHTOK_ERR`), so be
+careful with password-change stacks.
 
 ## What's here
 
