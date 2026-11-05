@@ -13,7 +13,7 @@ fn check_local(pamh: &mut PamHandle, _flags: i32, _args: &[String]) -> PamStatus
         None => return PamStatus::new(PAM_USER_UNKNOWN),
     };
 
-    if crate::modutil::passwd_by_name(&username).is_some() {
+    if crate::modutil::passwd_by_name(username).is_some() {
         PamStatus::new(PAM_SUCCESS)
     } else {
         PamStatus::new(PAM_USER_UNKNOWN)

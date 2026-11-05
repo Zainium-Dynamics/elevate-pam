@@ -13,7 +13,7 @@ fn check_usertype(pamh: &mut PamHandle, _flags: i32, args: &[String]) -> PamStat
         None => return PamStatus::new(PAM_AUTH_ERR),
     };
 
-    let Some(pw) = crate::modutil::passwd_by_name(&username) else {
+    let Some(pw) = crate::modutil::passwd_by_name(username) else {
         return PamStatus::new(PAM_AUTH_ERR);
     };
 

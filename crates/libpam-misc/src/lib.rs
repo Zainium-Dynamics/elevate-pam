@@ -109,9 +109,9 @@ pub unsafe extern "C" fn pam_misc_setenv(
 // ---- exported globals (misc_conv.c) -----------------------------------
 
 #[no_mangle]
-pub static mut pam_misc_conv_warn_time: libc::time_t = 0;
+pub static mut pam_misc_conv_warn_time: i64 = 0;
 #[no_mangle]
-pub static mut pam_misc_conv_die_time: libc::time_t = 0;
+pub static mut pam_misc_conv_die_time: i64 = 0;
 
 static WARN_LINE_DEFAULT: &[u8] = b"...Time is running out...\n\0";
 static DIE_LINE_DEFAULT: &[u8] = b"...Sorry, your time is up!\n\0";
