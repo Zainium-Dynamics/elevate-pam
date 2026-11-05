@@ -103,7 +103,7 @@ impl PathsConfig {
                 out.push(explicit.into());
             }
         }
-        // set at build time by distributions without a plain /etc (Zainium: /overlayer/syshub/etc)
+        // set at build time by distributions without a plain /etc
         if let Some(built_in) = option_env!("ELEVATE_PAM_CONFIG_PATH") {
             out.push(built_in.into());
         }

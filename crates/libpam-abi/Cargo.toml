@@ -1,6 +1,6 @@
 # Ships elevate-pam's C ABI a second time under the canonical libpam.so.0
 # name/SONAME, so pam-sys and any other dlopen("libpam.so.0")/-lpam
-# consumer (greetd, etc) links against Zainium's real PAM as a drop-in --
+# consumer (greetd, etc) links against the real PAM as a drop-in --
 # without renaming or duplicating anything in elevate-pam/pam itself.
 # See elevate-pam/pam's README "why two .so's" note.
 [package]
