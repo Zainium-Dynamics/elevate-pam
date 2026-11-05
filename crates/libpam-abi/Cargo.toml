@@ -2,7 +2,6 @@
 # name/SONAME, so pam-sys and any other dlopen("libpam.so.0")/-lpam
 # consumer (greetd, etc) links against the real PAM as a drop-in --
 # without renaming or duplicating anything in elevate-pam/pam itself.
-# See elevate-pam/pam's README "why two .so's" note.
 [package]
 name = "libpam-abi"
 publish = false

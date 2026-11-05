@@ -1,0 +1,87 @@
+elevate-pam
+===========
+
+A Linux-PAM implementation in Rust. It has the same four stacks (auth,
+account, session, password) and the same C pam_* ABI, so existing Linux-PAM
+modules can load, and its modules are named and behave like the usual
+pam_unix, pam_env, pam_limits and so on. The one big difference is that
+service stacks are TOML files instead of /etc/pam.d text. The old format
+can still be read when built with the legacy_pamd feature.
+
+It is used by elevate, but nothing here depends on it.
+
+It works for the stacks we use, but it is young. chauthtok in the builtin
+pam_unix is not finished (it returns PAM_AUTHTOK_ERR), so be careful with
+password-change stacks.
+
+Layout
+------
+
+    crates/pam/              the engine, built as libelevate_pam
+    crates/libpam-abi/       libpam.so.0-compatible shim
+    crates/libpam-misc/      pam_misc helpers
+    crates/elevate-pam-cli/  small CLI
+    modules/                 loadable pam_*.so modules
+    helpers/                 unix_chkpwd
+    etc/                     example config and service stacks
+    include/security/        C headers
+    scripts/                 build and install
+
+Most modules are also compiled into the library, so the .so files are
+only needed if you would rather load them.
+
+Building
+--------
+
+    make
+    make test
+
+Passwords are checked with elevate-crypto, which cargo pulls from git. To
+build without it:
+
+    cargo build --release -p elevate-pam --no-default-features \
+      --features std,dynload,syslog,secure_mem,fail_delay,builtin_modules
+
+The core also builds without std (make check-nostd).
+
+Configuration
+-------------
+
+elevate-pam uses the first config it finds:
+
+    $ELEVATE_PAM_CONFIG
+    /etc/elevate-pam/elevate-pam.toml
+    /etc/elevate-pam.toml
+    ./elevate-pam.toml
+
+Paths are set in its [paths] table, and what you leave out follows from
+prefix. With no config file it uses the normal layout (/etc, /lib/security).
+There is a commented example in etc/elevate-pam/elevate-pam.toml.
+
+A service stack, services/other.toml:
+
+    [service]
+    name = "other"
+
+    [[auth]]
+    control = "required"
+    module = "unix"
+
+    [[account]]
+    control = "required"
+    module = "unix"
+
+Installing
+----------
+
+    make install                     /lib, /etc, /bin
+    make install DESTDIR=$PWD/pkg    stage it for a package
+    make install PREFIX=/opt/pam     relocated
+
+For a relocated install, set
+ELEVATE_PAM_CONFIG=/opt/pam/etc/elevate-pam/elevate-pam.toml.
+
+License
+-------
+
+MIT OR Apache-2.0.

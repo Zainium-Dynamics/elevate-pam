@@ -9,7 +9,7 @@ repository = "https://github.com/Zainium-Dynamics/elevate-privilege"
 homepage = "https://zainiumdynamics.tech"
 authors = ["alizain <alizain@zainiumdynamics.tech>"]
 description = "elevate-pam — authentication library for elevate/elev/viselev (MIT OR Apache-2.0)"
-readme = "../../README.md"
+readme = "../../README"
 categories = ["authentication", "os::linux-apis"]
 keywords = ["pam", "authentication", "linux", "security"]
 
