@@ -12,7 +12,6 @@ nothing here depends on it.
 
 Status: works for the stacks we use it for, but it's young. `chauthtok` in the
 builtin `pam_unix` is not finished (it returns `PAM_AUTHTOK_ERR`), so be
-careful with password-change stacks. See [SECURITY.md](SECURITY.md).
 
 ## What's here
 
@@ -21,7 +20,7 @@ pam/              the engine, built as libelevate_pam (rlib, cdylib, staticlib)
 libpam-abi/       libpam.so.0-compatible shim
 libpam-misc/      pam_misc helpers
 elevate-pam-cli/  small CLI
-pam-*/            modules built as loadable pam_*.so (unix, env, limits, ...)
+modules/          one crate per PAM module (pam-unix, pam-env, ...)
 helpers/          unix_chkpwd
 etc/              example config and service stacks
 include/security/ C headers
